@@ -12,7 +12,7 @@ defmodule PhoenixSlime do
       {:safe, ["<p>", "hello world", "</p>"]}
   """
   defmacro sigil_l(expr, opts) do
-    handle_sigil(expr, opts, __CALLER__.line)
+    handle_sigil(expr, opts, __CALLER__)
   end
 
   @doc """
@@ -25,13 +25,23 @@ defmodule PhoenixSlime do
       {:safe, ["<p>hello ", "world", "</p>"]}
   """
   defmacro sigil_L(expr, opts) do
-    handle_sigil(expr, opts, __CALLER__.line)
+    handle_sigil(expr, opts, __CALLER__)
   end
 
-  defp handle_sigil({:<<>>, _, [expr]}, [], line) do
+  defp handle_sigil({:<<>>, meta, [expr]}, [], caller) do
+    options = [
+      source: expr,
+      engine: Phoenix.HTML.Engine,
+      file: caller.file,
+      line: caller.line + 1,
+      module: caller.module,
+      indentation: meta[:indentation] || 0,
+      caller: caller
+    ]
+
     expr
     |> Slime.Renderer.precompile()
-    |> EEx.compile_string(engine: Phoenix.HTML.Engine, line: line + 1)
+    |> EEx.compile_string(options)
   end
 
   defp handle_sigil(_, _, _) do
@@ -48,30 +58,24 @@ defmodule PhoenixSlime do
 
       iex> import PhoenixSlime
       iex> assigns = %{world: "world"}
-      iex> rendered = ~H[p hello #{@world}]
+      iex> rendered = ~M[p hello #{@world}]
       %Phoenix.LiveView.Rendered{
         rendered |
         static: ["<p>hello ", "</p>"]
       }
-
-  **Note:** this sigil collides with `phoenix_live_view`'s own `sigil_H`.
-  You will likely need to change the expression within your app's `*Web.ex` file
-  where `Phoenix.LiveView.Helpers` is imported, like so:
-
-  ```diff
-  - import Phoenix.LiveView.Helpers
-  + import Phoenix.LiveView.Helpers, except: [sigil_H: 2]
-  ```
-
-  That same space is probably a fine spot to import this sigil, too, while you're at it,
-  but it's your code, you do you. I gotta go.
   """
-  defmacro sigil_H({:<<>>, _, [expr]}, _opts) do
-    expr
-     |> Slime.Renderer.precompile_heex()
-     |> EEx.compile_string(
-          engine: Phoenix.LiveView.HTMLEngine,
-          line: __CALLER__.line + 1
-        )
+  defmacro sigil_M({:<<>>, meta, [expr]}, _opts) do
+    options = [
+      source: expr,
+      engine: Phoenix.LiveView.HTMLEngine,
+      file: __CALLER__.file,
+      line: __CALLER__.line + 1,
+      module: __CALLER__.module,
+      indentation: meta[:indentation] || 0,
+      caller: __CALLER__
+    ]
+
+    Slime.Renderer.precompile_heex(expr)
+    |> EEx.compile_string(options)
   end
 end

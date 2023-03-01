@@ -7,7 +7,13 @@ defmodule PhoenixSlime.LiveViewHTMLEngine do
   def compile(path, _name) do
     path
     |> read!()
-    |> EEx.compile_string(engine: Phoenix.LiveView.HTMLEngine, file: path, line: 1)
+    |> EEx.compile_string(
+      engine: Phoenix.LiveView.HTMLEngine,
+      caller: path,
+      source: path,
+      file: path,
+      line: 1
+    )
   end
 
   defp read!(file_path) do
