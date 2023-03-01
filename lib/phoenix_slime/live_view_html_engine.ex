@@ -9,7 +9,7 @@ defmodule PhoenixSlime.LiveViewHTMLEngine do
     |> read!()
     |> EEx.compile_string(
       engine: Phoenix.LiveView.HTMLEngine,
-      caller: path,
+      caller: __ENV__,
       source: path,
       file: path,
       line: 1
